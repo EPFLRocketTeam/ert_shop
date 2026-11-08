@@ -88,14 +88,42 @@ starts. **The first start takes a few minutes** - follow it with `docker compose
 - Keep `POSTGRES_PASSWORD` to letters and digits (e.g. the hex output of the command in
   `.env.example`): characters like `@ : / #` break the `DATABASE_URL` connection string.
 
-### Dokploy
+### Dokploy (production)
 
-1. New **Compose** service -> this repo, compose file `docker-compose.yml`.
-2. Environment tab: the variables from `.env.example` with real values
-   (strong random `POSTGRES_PASSWORD`, `JWT_SECRET`, `COOKIE_SECRET`; production URLs/CORS).
-3. Domains: `api.shop.epflrocketteam.ch` -> `medusa-server:9000`,
-   `shop.epflrocketteam.ch` -> `storefront:8000` (DNS records once we have access to the domain).
-4. Add the Stripe webhook (see above) pointing at the production backend.
+Server: the dedicated shop server (4C / 8 GB / 80 GB, `185.223.253.189`).
+DNS: `shop.epflrocketteam.ch` and `api.shop.epflrocketteam.ch` both point to it.
+
+The whole stack (incl. its own Postgres and Redis) is **one Dokploy "Compose" service** -
+no separate Dokploy database/application services are needed.
+
+1. Project `ert-shop` -> environment `production` -> **Create Service -> Compose**, server
+   `4C 80GB 8GB`.
+2. **General -> Provider**: GitHub, repository `EPFLRocketTeam/ert_shop`, branch `main`,
+   compose path `./docker-compose.yml`. Enable **Autodeploy** (redeploys on every push/merge to
+   `main`).
+3. **Advanced**: enable **Isolated Deployments** (Dokploy then wires the networking between the
+   containers and its proxy by itself).
+4. **Environment**: everything from `.env.example`, with **new** production secrets (never reuse
+   the local ones) and the production URLs:
+   ```
+   STORE_CORS=https://shop.epflrocketteam.ch
+   ADMIN_CORS=https://api.shop.epflrocketteam.ch
+   AUTH_CORS=https://api.shop.epflrocketteam.ch
+   MEDUSA_BACKEND_URL=https://api.shop.epflrocketteam.ch
+   NEXT_PUBLIC_BASE_URL=https://shop.epflrocketteam.ch
+   MEDUSA_ADMIN_EMAIL=...        # first admin login
+   MEDUSA_ADMIN_PASSWORD=...
+   ```
+   Stripe stays empty until the checkout step (then test keys first).
+5. **Domains** (HTTPS, certificate: Let's Encrypt):
+   - `shop.epflrocketteam.ch` -> service `storefront`, port `8000`
+   - `api.shop.epflrocketteam.ch` -> service `medusa-server`, port `9000`
+6. **Deploy**. First deploy takes a while (image builds + storefront build at start). Then:
+   shop at https://shop.epflrocketteam.ch, admin at https://api.shop.epflrocketteam.ch/app.
+7. Later (checkout step): Stripe webhook -> `https://api.shop.epflrocketteam.ch/hooks/payment/stripe_stripe`.
+
+The container ports are bound to `127.0.0.1` only, so on the server the services are reachable
+from the internet exclusively through Dokploy's HTTPS proxy.
 
 ## Next steps
 
