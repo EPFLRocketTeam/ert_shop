@@ -3,7 +3,14 @@
  *
  *   yarn seed
  *
- * Creates (idempotency: run once on an empty database):
+ * Safe to run repeatedly: if the store already has a region it only re-exports
+ * the publishable API key and exits. In Docker it runs automatically on every
+ * start of the server container (see docker-entrypoint.sh).
+ *
+ * If PUBLISHABLE_KEY_FILE is set, the publishable key is written to that file
+ * so the storefront container can pick it up without any manual copy/paste.
+ *
+ * Creates:
  *  - store currency CHF (default)
  *  - region "Switzerland" (CH, CHF) using Stripe if STRIPE_API_KEY is set,
  *    otherwise the manual "system" provider (dev only - no real payment!)
@@ -15,6 +22,8 @@
  *  - a sample "ERT T-Shirt" product (CHF 40, sizes S-XL, pre-order /
  *    no inventory tracking) to test the purchase flow end-to-end
  */
+import fs from "fs"
+import path from "path"
 import { ExecArgs } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
@@ -61,10 +70,39 @@ const updateStoreCurrencies = createWorkflow(
   }
 )
 
+function exportPublishableKey(token: string, logger: { info: (m: string) => void }) {
+  logger.info(
+    `Publishable API key (storefront NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY): ${token}`
+  )
+  const file = process.env.PUBLISHABLE_KEY_FILE
+  if (file) {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, token)
+    logger.info(`Publishable API key written to ${file}`)
+  }
+}
+
 export default async function seedErtShop({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const link = container.resolve(ContainerRegistrationKeys.LINK)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+  // Already seeded? Then only re-export the key.
+  const { data: existingRegions } = await query.graph({ entity: "region", fields: ["id"] })
+  if (existingRegions.length) {
+    logger.info("Store already seeded, skipping.")
+    const { data: keys } = await query.graph({
+      entity: "api_key",
+      fields: ["token"],
+      filters: { type: "publishable", revoked_at: null },
+    })
+    if (keys[0]?.token) {
+      exportPublishableKey(keys[0].token, logger)
+    } else {
+      logger.warn("No publishable API key found - create one in the admin dashboard.")
+    }
+    return
+  }
   const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT)
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL)
   const storeModuleService = container.resolve(Modules.STORE)
@@ -278,7 +316,5 @@ export default async function seedErtShop({ container }: ExecArgs) {
   })
 
   logger.info("Done.")
-  logger.info(
-    `Publishable API key (put this in storefront/.env as NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY): ${publishableKey.token}`
-  )
+  exportPublishableKey(publishableKey.token, logger)
 }

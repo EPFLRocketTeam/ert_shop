@@ -66,6 +66,14 @@ const paymentModule = STRIPE_API_KEY
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    // Medusa turns on SSL automatically for any database host that isn't
+    // "localhost". Our Postgres runs next to Medusa in the same Docker network
+    // without TLS, so SSL is off unless DATABASE_SSL=true (e.g. a managed DB).
+    databaseDriverOptions: {
+      connection: {
+        ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+      },
+    },
     redisUrl: REDIS_URL,
     // "server" | "worker" | "shared". In Dokploy we run one container as
     // server and one as worker; locally "shared" runs both in one process.

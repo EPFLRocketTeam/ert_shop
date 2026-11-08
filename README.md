@@ -54,26 +54,48 @@ Note: the region is created with Stripe only if `STRIPE_API_KEY` was set when `y
 If you seeded without it, add the Stripe provider to the region in the admin dashboard
 (Settings -> Regions -> Switzerland).
 
-## Deployment (Dokploy)
+## Running everything with Docker (local or Dokploy)
 
-Everything is described in `docker-compose.yml`: Postgres, Redis, Medusa **server** (API + admin,
-runs migrations on start), Medusa **worker** (background jobs), and the storefront.
+Everything is described in `docker-compose.yml`: Postgres, Redis, Medusa **server** (API + admin),
+Medusa **worker** (background jobs) and the storefront.
 
-1. Dokploy -> new **Compose** service -> this repo, compose file `docker-compose.yml`.
-2. Environment tab: paste the variables from `.env.example` with real values
+```bash
+cp .env.example .env     # fill in passwords/secrets (see comments in the file)
+docker compose up -d --build
+```
+
+On start the server container automatically:
+1. runs the database migrations,
+2. seeds the shop on the very first start (later starts skip this),
+3. writes the publishable API key to a shared volume,
+4. creates the admin user if `MEDUSA_ADMIN_EMAIL` / `MEDUSA_ADMIN_PASSWORD` are set.
+
+The storefront container waits until the backend is healthy, reads the key, then runs
+`next build` (Next.js prerenders pages from the live backend, so it can't build earlier) and
+starts. **The first start takes a few minutes** - follow it with `docker compose logs -f storefront`.
+
+- Shop: http://localhost:8000 - Admin: http://localhost:9000/app
+- Admin user later / another one: `docker compose exec medusa-server npx medusa user -e <email> -p <password>`
+
+### Troubleshooting
+
+- **`role "..." does not exist` / `password authentication failed`** in the postgres logs:
+  Postgres creates its user and password only the **first** time it starts on an empty volume.
+  If `POSTGRES_USER` / `POSTGRES_PASSWORD` changed after that, the database still has the old
+  ones. On a fresh setup with no data worth keeping, wipe the volumes and start again:
+  `docker compose down -v && docker compose up -d --build`.
+  (On a server with real orders, never use `-v` - change the password inside Postgres instead.)
+- Keep `POSTGRES_PASSWORD` to letters and digits (e.g. the hex output of the command in
+  `.env.example`): characters like `@ : / #` break the `DATABASE_URL` connection string.
+
+### Dokploy
+
+1. New **Compose** service -> this repo, compose file `docker-compose.yml`.
+2. Environment tab: the variables from `.env.example` with real values
    (strong random `POSTGRES_PASSWORD`, `JWT_SECRET`, `COOKIE_SECRET`; production URLs/CORS).
 3. Domains: `api.shop.epflrocketteam.ch` -> `medusa-server:9000`,
    `shop.epflrocketteam.ch` -> `storefront:8000` (DNS records once we have access to the domain).
-4. **First deploy only** - the storefront build needs a running, seeded backend
-   (Next.js prerenders product pages at build time):
-   1. deploy; the storefront may fail on this first run, that's expected
-   2. seed + create the admin user inside the server container:
-      ```bash
-      docker compose exec medusa-server npx medusa exec ./src/scripts/seed.js
-      docker compose exec medusa-server npx medusa user -e <email> -p <password>
-      ```
-   3. put the printed key in `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` and redeploy.
-5. Add the Stripe webhook (see above) pointing at the production backend.
+4. Add the Stripe webhook (see above) pointing at the production backend.
 
 ## Next steps
 
