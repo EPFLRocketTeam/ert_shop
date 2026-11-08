@@ -64,8 +64,11 @@ services:
       interval: 10s
       start_period: 300s
       retries: 10
+    # Bound to 127.0.0.1 only: reachable at localhost:9000 on your machine, but
+    # NOT from the internet on the server - there the public traffic goes
+    # through Dokploy's Traefik (HTTPS) via the domain set in the Dokploy UI.
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
 
   medusa-worker:
     build: ./backend
@@ -98,7 +101,7 @@ services:
     volumes:
       - shared:/shared:ro
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
 volumes:
   pgdata:

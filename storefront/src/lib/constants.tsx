@@ -1,4 +1,7 @@
 import React from "react"
+
+/** The main EPFL Rocket Team website (linked from the shop header/footer). */
+export const ERT_MAIN_SITE = "https://epflrocketteam.ch"
 import { CreditCard } from "@medusajs/icons"
 
 import Ideal from "@modules/common/icons/ideal"

@@ -1,5 +1,7 @@
 "use client"
 
+import { ERT_MAIN_SITE } from "@lib/constants"
+
 import Back from "@modules/common/icons/back"
 import FastDelivery from "@modules/common/icons/fast-delivery"
 import Refresh from "@modules/common/icons/refresh"
@@ -78,38 +80,41 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
   )
 }
 
+// Copy reflects the ERT pre-order model (shipping options are managed in the admin).
 const ShippingInfoTab = () => {
   return (
     <div className="text-small-regular py-8">
       <div className="grid grid-cols-1 gap-y-8">
         <div className="flex items-start gap-x-2">
-          <FastDelivery />
+          <Refresh />
           <div>
-            <span className="font-semibold">Fast delivery</span>
+            <span className="font-semibold">Made in batches</span>
             <p className="max-w-sm">
-              Your package will arrive in 3-5 business days at your pick up
-              location or in the comfort of your home.
+              Our merch is produced in batches once a pre-order closes, so it
+              takes a little longer than a regular shop.
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
-          <Refresh />
+          <FastDelivery />
           <div>
-            <span className="font-semibold">Simple exchanges</span>
+            <span className="font-semibold">Pickup at EPFL or delivery</span>
             <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
+              Collect your order from the team on campus, or choose delivery by
+              Swiss Post at checkout.
             </p>
           </div>
         </div>
         <div className="flex items-start gap-x-2">
           <Back />
           <div>
-            <span className="font-semibold">Easy returns</span>
+            <span className="font-semibold">Questions?</span>
             <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
+              Sizes, exchanges or anything else - reach us through{" "}
+              <a href={`${ERT_MAIN_SITE}/contact/`} className="underline hover:text-ert-red">
+                epflrocketteam.ch/contact
+              </a>
+              .
             </p>
           </div>
         </div>
