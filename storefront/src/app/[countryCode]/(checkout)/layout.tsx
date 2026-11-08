@@ -1,6 +1,6 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
-import MedusaCTA from "@modules/layout/components/medusa-cta"
+import ErtLogo from "@modules/common/icons/ert-logo"
 
 export default function CheckoutLayout({
   children,
@@ -8,8 +8,8 @@ export default function CheckoutLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="w-full bg-white relative small:min-h-screen">
-      <div className="h-16 bg-white border-b ">
+    <div className="w-full bg-ui-bg-base relative small:min-h-screen">
+      <div className="h-16 bg-ui-bg-base border-b border-ui-border-base">
         <nav className="flex h-full items-center content-container justify-between">
           <LocalizedClientLink
             href="/cart"
@@ -26,18 +26,17 @@ export default function CheckoutLayout({
           </LocalizedClientLink>
           <LocalizedClientLink
             href="/"
-            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
+            className="flex items-center gap-3"
             data-testid="store-link"
+            aria-label="EPFL Rocket Team Shop - home"
           >
-            Medusa Store
+            <ErtLogo className="h-8 w-auto" />
+            <span className="ert-label font-semibold tracking-[0.18em]">Shop</span>
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>
       </div>
       <div className="relative" data-testid="checkout-container">{children}</div>
-      <div className="py-4 w-full flex items-center justify-center">
-        <MedusaCTA />
-      </div>
     </div>
   )
 }

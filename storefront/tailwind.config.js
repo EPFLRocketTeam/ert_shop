@@ -21,6 +21,18 @@ module.exports = {
         padding: "padding-top padding-right padding-bottom padding-left",
       },
       colors: {
+        // EPFL Rocket Team palette (same values as tokens.css on epflrocketteam.ch)
+        ert: {
+          red: "#da291c",
+          "red-hover": "#a82016",
+          logo: "#e20816",
+          canvas: "#000000",
+          surface: "#1e1e1e",
+          raised: "#333333",
+          muted: "#666666",
+          text: "#f6f6f6",
+          "text-muted": "#a9a9a9",
+        },
         grey: {
           0: "#FFFFFF",
           5: "#F9FAFB",
@@ -60,6 +72,7 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          "Aspekta",
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
