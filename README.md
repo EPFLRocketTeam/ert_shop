@@ -39,20 +39,39 @@ use `node .yarn/releases/yarn-4.12.0.cjs <cmd>`.
 Without `STRIPE_API_KEY` the region uses Medusa's manual payment provider (orders go through without
 any real payment) - **only for local testing.**
 
-## Stripe
+## Stripe (card + TWINT)
 
-1. Use **test keys** (`sk_test_...` / `pk_test_...`) until a full checkout has been verified.
-2. Backend: `STRIPE_API_KEY` (secret key). Storefront: `NEXT_PUBLIC_STRIPE_KEY` (publishable key).
-3. Webhook: Stripe Dashboard -> Developers -> Webhooks -> add endpoint
-   `https://api.shop.epflrocketteam.ch/hooks/payment/stripe_stripe`
-   with the `payment_intent.*` events (`succeeded`, `amount_capturable_updated`, `payment_failed`,
-   `canceled`, `processing`, `requires_action`, `partially_funded`); put its signing secret in
-   `STRIPE_WEBHOOK_SECRET`.
-4. Keys go **only** into `.env` files / Dokploy environment variables - never into git.
+Checkout uses Stripe's **Payment Element**: it shows every payment method enabled in the
+Stripe Dashboard. Cards are confirmed on the page; **TWINT** redirects to the TWINT app/QR page
+and back to the checkout, which then places the order.
 
-Note: the region is created with Stripe only if `STRIPE_API_KEY` was set when `yarn seed` ran.
-If you seeded without it, add the Stripe provider to the region in the admin dashboard
-(Settings -> Regions -> Switzerland).
+1. Use **test keys** until a full checkout has been verified (test mode / sandbox).
+2. Keys - never in git, only in `.env` files / Dokploy:
+   - `STRIPE_API_KEY` = **secret** key `sk_test_...` (backend only)
+   - `NEXT_PUBLIC_STRIPE_KEY` = **publishable** key `pk_test_...` (ends up in the browser - that's
+     why it must never be the secret one)
+3. Payment methods shown at checkout = the ones enabled in Stripe (Settings -> Payment methods).
+   To keep the shop to **Card + TWINT** without touching the account-wide *Default* configuration
+   (which other ERT payments may use), create a separate configuration there (dropdown next to
+   "Default" -> new configuration, e.g. "ERT Shop": Cards, TWINT, optionally Apple Pay / Google
+   Pay) and put its id (`pmc_...`) into `STRIPE_PAYMENT_METHOD_CONFIGURATION`. Test and live mode
+   have different `pmc_` ids. TWINT needs Stripe's approval for live payments.
+4. Webhook (lets Medusa confirm a payment even if the customer closes the tab after paying):
+   - Production: Stripe Dashboard -> Developers -> Webhooks -> add endpoint
+     `https://api.shop.epflrocketteam.ch/hooks/payment/stripe_stripe` with the `payment_intent.*`
+     events (`succeeded`, `amount_capturable_updated`, `payment_failed`, `canceled`, `processing`,
+     `requires_action`, `partially_funded`); its signing secret goes into `STRIPE_WEBHOOK_SECRET`.
+   - Locally (optional): [Stripe CLI](https://docs.stripe.com/stripe-cli)
+     `stripe listen --forward-to localhost:9000/hooks/payment/stripe_stripe` prints a temporary
+     `whsec_...` for your `.env`.
+5. Region: when `STRIPE_API_KEY` is set, the server switches every region to **Stripe only** on
+   start (`src/scripts/sync-payment-providers.ts`; without Docker: `yarn sync:payments`). This also
+   removes the manual "system" payment provider, which would otherwise let orders through
+   without payment.
+
+Test payments: card `4242 4242 4242 4242`, any future date, any CVC; for TWINT, Stripe's test
+page lets you authorize or fail the payment. More test cards (3-D Secure, declines):
+<https://docs.stripe.com/testing>.
 
 ## Running everything with Docker (local or Dokploy)
 
@@ -127,10 +146,8 @@ from the internet exclusively through Dokploy's HTTPS proxy.
 
 ## Next steps
 
-- [ ] Run a full test checkout with Stripe test keys
-- [ ] TWINT: the starter's checkout only uses Stripe's Card Element; TWINT needs switching to
-      Stripe's Payment Element (+ enabling TWINT in the Stripe dashboard)
+- [ ] Run a full test checkout with Stripe test keys (card + TWINT)
 - [ ] Pass the Stripe processing fee on to the customer at checkout
 - [ ] Member discount codes (Medusa promotions)
-- [ ] Re-theme the storefront to match epflrocketteam.ch
+- [x] Re-theme the storefront to match epflrocketteam.ch
 - [ ] Link to the shop from the main website

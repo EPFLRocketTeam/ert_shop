@@ -1,5 +1,5 @@
+import { ERT_MAIN_SITE } from "@lib/constants"
 import { Heading } from "@medusajs/ui"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import React from "react"
 
 const Help = () => {
@@ -9,12 +9,12 @@ const Help = () => {
       <div className="text-base-regular my-2">
         <ul className="gap-y-2 flex flex-col">
           <li>
-            <LocalizedClientLink href="/contact">Contact</LocalizedClientLink>
+            <a href={`${ERT_MAIN_SITE}/contact/`} className="hover:text-ert-red">
+              Contact the team ↗
+            </a>
           </li>
-          <li>
-            <LocalizedClientLink href="/contact">
-              Returns & Exchanges
-            </LocalizedClientLink>
+          <li className="text-ui-fg-subtle txt-small">
+            Questions about sizes, exchanges or pickup? Mention your order number.
           </li>
         </ul>
       </div>

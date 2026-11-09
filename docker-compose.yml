@@ -50,6 +50,7 @@ services:
       MEDUSA_BACKEND_URL: ${MEDUSA_BACKEND_URL:-http://localhost:9000}
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PAYMENT_METHOD_CONFIGURATION: ${STRIPE_PAYMENT_METHOD_CONFIGURATION:-}
       MEDUSA_WORKER_MODE: server
       DISABLE_MEDUSA_ADMIN: "false"
       # the seed writes the publishable key here for the storefront
