@@ -1,13 +1,12 @@
 import { Radio as RadioGroupOption } from "@headlessui/react"
 import { Text, clx } from "@medusajs/ui"
-import React, { useContext, useMemo, type JSX } from "react"
+import React, { useContext, type JSX } from "react"
 
 import Radio from "@modules/common/components/radio"
 
 import { isManual } from "@lib/constants"
 import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-details"
-import { CardElement } from "@stripe/react-stripe-js"
-import { StripeCardElementOptions } from "@stripe/stripe-js"
+import { PaymentElement } from "@stripe/react-stripe-js"
 import PaymentTest from "../payment-test"
 import { StripeContext } from "../payment-wrapper/stripe-wrapper"
 
@@ -73,29 +72,20 @@ export const StripeCardContainer = ({
   setCardBrand,
   setError,
   setCardComplete,
+  billingDefaults,
 }: Omit<PaymentContainerProps, "children"> & {
   setCardBrand: (brand: string) => void
   setError: (error: string | null) => void
   setCardComplete: (complete: boolean) => void
+  /** prefilled from the checkout address step, so Stripe doesn't ask again */
+  billingDefaults?: {
+    name?: string
+    email?: string
+    phone?: string
+    address?: { country?: string; postal_code?: string; city?: string; line1?: string }
+  }
 }) => {
   const stripeReady = useContext(StripeContext)
-
-  const useOptions: StripeCardElementOptions = useMemo(() => {
-    return {
-      style: {
-        base: {
-          fontFamily: "Inter, sans-serif",
-          color: "#424270",
-          "::placeholder": {
-            color: "rgb(107 114 128)",
-          },
-        },
-      },
-      classes: {
-        base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-ui-bg-field border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-ui-border-base hover:bg-ui-bg-field-hover transition-all duration-300 ease-in-out",
-      },
-    }
-  }, [])
 
   return (
     <PaymentContainer
@@ -107,16 +97,19 @@ export const StripeCardContainer = ({
       {selectedPaymentOptionId === paymentProviderId &&
         (stripeReady ? (
           <div className="my-4 transition-all duration-150 ease-in-out">
-            <Text className="txt-medium-plus text-ui-fg-base mb-1">
-              Enter your card details:
+            <Text className="txt-medium-plus text-ui-fg-base mb-3">
+              Pay by card or TWINT:
             </Text>
-            <CardElement
-              options={useOptions as StripeCardElementOptions}
+            {/* Stripe Payment Element: shows every method enabled in the Stripe Dashboard */}
+            <PaymentElement
+              options={{
+                layout: "tabs",
+                defaultValues: billingDefaults ? { billingDetails: billingDefaults } : undefined,
+              }}
               onChange={(e) => {
-                setCardBrand(
-                  e.brand && e.brand.charAt(0).toUpperCase() + e.brand.slice(1)
-                )
-                setError(e.error?.message || null)
+                const labels: Record<string, string> = { card: "Card", twint: "TWINT" }
+                setCardBrand(labels[e.value.type] ?? e.value.type)
+                setError(null)
                 setCardComplete(e.complete)
               }}
             />

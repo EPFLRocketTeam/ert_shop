@@ -10,6 +10,9 @@ if [ "$MEDUSA_WORKER_MODE" != "worker" ]; then
   echo "Seeding (skipped automatically if already done)..."
   npx medusa exec ./src/scripts/seed.js
 
+  # Use Stripe (only) in all regions as soon as a Stripe key is configured.
+  npx medusa exec ./src/scripts/sync-payment-providers.js
+
   # Optional: create the first admin user from env (ignored if it exists).
   if [ -n "$MEDUSA_ADMIN_EMAIL" ] && [ -n "$MEDUSA_ADMIN_PASSWORD" ]; then
     npx medusa user -e "$MEDUSA_ADMIN_EMAIL" -p "$MEDUSA_ADMIN_PASSWORD" >/dev/null 2>&1 \

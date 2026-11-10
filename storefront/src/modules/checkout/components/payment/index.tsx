@@ -144,6 +144,19 @@ const Payment = ({
                   <div key={paymentMethod.id}>
                     {isStripeLike(paymentMethod.id) ? (
                       <StripeCardContainer
+                        billingDefaults={{
+                          name: [cart.billing_address?.first_name, cart.billing_address?.last_name]
+                            .filter(Boolean)
+                            .join(" "),
+                          email: cart.email ?? "",
+                          phone: cart.billing_address?.phone ?? "",
+                          address: {
+                            country: cart.billing_address?.country_code?.toUpperCase() ?? "",
+                            postal_code: cart.billing_address?.postal_code ?? "",
+                            city: cart.billing_address?.city ?? "",
+                            line1: cart.billing_address?.address_1 ?? "",
+                          },
+                        }}
                         paymentProviderId={paymentMethod.id}
                         selectedPaymentOptionId={selectedPaymentMethod}
                         paymentInfoMap={paymentInfoMap}
@@ -195,7 +208,7 @@ const Payment = ({
             data-testid="submit-payment-button"
           >
             {!activeSession && isStripeLike(selectedPaymentMethod)
-              ? " Enter card details"
+              ? "Enter payment details"
               : "Continue to review"}
           </Button>
         </div>
