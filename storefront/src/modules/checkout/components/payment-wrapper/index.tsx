@@ -24,9 +24,12 @@ const stripePromise = stripeKey
   : null
 
 const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
-  const paymentSession = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
-  )
+  // "pending" while the customer pays; after a redirect-based payment (TWINT)
+  // the Stripe webhook may already have authorized it - keep Stripe mounted then.
+  const sessions = cart.payment_collection?.payment_sessions
+  const paymentSession =
+    sessions?.find((s) => s.status === "pending") ??
+    sessions?.find((s) => s.status === "authorized")
 
   if (
     isStripeLike(paymentSession?.provider_id) &&

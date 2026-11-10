@@ -5,7 +5,8 @@ import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
-import React, { useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import React, { useEffect, useRef, useState } from "react"
 import ErrorMessage from "../error-message"
 
 type PaymentButtonProps = {
@@ -56,7 +57,16 @@ const StripePaymentButton = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  const stripe = useStripe()
+  const elements = useElements()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const handledReturn = useRef(false)
+
   const onPaymentCompleted = async () => {
+    // Completes the cart in Medusa (which re-checks the payment with Stripe)
+    // and redirects to the order confirmation page.
     await placeOrder()
       .catch((err) => {
         setErrorMessage(err.message)
@@ -66,70 +76,84 @@ const StripePaymentButton = ({
       })
   }
 
-  const stripe = useStripe()
-  const elements = useElements()
-  const card = elements?.getElement("card")
+  const isPaid = (status?: string) =>
+    status === "succeeded" || status === "requires_capture" || status === "processing"
 
-  const session = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
-  )
+  // Back from a redirect-based method (e.g. TWINT): Stripe appends
+  // payment_intent_client_secret + redirect_status to the return_url.
+  useEffect(() => {
+    const clientSecret = searchParams.get("payment_intent_client_secret")
+    if (!stripe || !clientSecret || handledReturn.current) return
+    handledReturn.current = true
+    setSubmitting(true)
+
+    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent, error }) => {
+      if (paymentIntent && isPaid(paymentIntent.status)) {
+        return onPaymentCompleted()
+      }
+      setErrorMessage(
+        error?.message ||
+          "The payment was not completed. Please try again or choose another payment method."
+      )
+      setSubmitting(false)
+      // drop Stripe's query params so a refresh doesn't re-run this
+      router.replace(`${pathname}?step=review`, { scroll: false })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stripe, searchParams])
 
   const disabled = !stripe || !elements ? true : false
 
   const handlePayment = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    if (!stripe || !elements || !card || !cart) {
+    if (!stripe || !elements || !cart) {
       setSubmitting(false)
       return
     }
 
-    await stripe
-      .confirmCardPayment(session?.data.client_secret as string, {
-        payment_method: {
-          card: card,
+    const address = cart.billing_address
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        // only used by redirect-based methods (TWINT); cards stay on the page
+        return_url: `${window.location.origin}${pathname}?step=review`,
+        payment_method_data: {
           billing_details: {
-            name:
-              cart.billing_address?.first_name +
-              " " +
-              cart.billing_address?.last_name,
+            name: [address?.first_name, address?.last_name].filter(Boolean).join(" "),
+            email: cart.email ?? undefined,
+            phone: address?.phone ?? undefined,
             address: {
-              city: cart.billing_address?.city ?? undefined,
-              country: cart.billing_address?.country_code ?? undefined,
-              line1: cart.billing_address?.address_1 ?? undefined,
-              line2: cart.billing_address?.address_2 ?? undefined,
-              postal_code: cart.billing_address?.postal_code ?? undefined,
-              state: cart.billing_address?.province ?? undefined,
+              city: address?.city ?? undefined,
+              country: address?.country_code ?? undefined,
+              line1: address?.address_1 ?? undefined,
+              line2: address?.address_2 ?? undefined,
+              postal_code: address?.postal_code ?? undefined,
+              state: address?.province ?? undefined,
             },
-            email: cart.email,
-            phone: cart.billing_address?.phone ?? undefined,
           },
         },
-      })
-      .then(({ error, paymentIntent }) => {
-        if (error) {
-          const pi = error.payment_intent
+      },
+      redirect: "if_required",
+    })
 
-          if (
-            (pi && pi.status === "requires_capture") ||
-            (pi && pi.status === "succeeded")
-          ) {
-            onPaymentCompleted()
-          }
+    if (error) {
+      // the payment can still have gone through (e.g. a retry after a timeout)
+      if (isPaid(error.payment_intent?.status)) {
+        return onPaymentCompleted()
+      }
+      setErrorMessage(error.message || "The payment failed. Please try again.")
+      setSubmitting(false)
+      return
+    }
 
-          setErrorMessage(error.message || null)
-          return
-        }
+    if (isPaid(paymentIntent?.status)) {
+      return onPaymentCompleted()
+    }
 
-        if (
-          (paymentIntent && paymentIntent.status === "requires_capture") ||
-          paymentIntent.status === "succeeded"
-        ) {
-          return onPaymentCompleted()
-        }
-
-        return
-      })
+    setSubmitting(false)
   }
 
   return (

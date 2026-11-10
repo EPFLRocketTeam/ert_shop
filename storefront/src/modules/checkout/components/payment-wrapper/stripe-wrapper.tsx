@@ -22,6 +22,29 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
 }) => {
   const options: StripeElementsOptions = {
     clientSecret: paymentSession!.data?.client_secret as string | undefined,
+    // Payment Element styled like the rest of the shop (ERT dark theme)
+    appearance: {
+      theme: "night",
+      variables: {
+        colorPrimary: "#da291c",
+        colorBackground: "#1e1e1e",
+        colorText: "#f6f6f6",
+        colorTextSecondary: "#a9a9a9",
+        colorDanger: "#ef4a3d",
+        fontFamily: "Aspekta, Inter, system-ui, sans-serif",
+        borderRadius: "8px",
+      },
+    },
+    fonts:
+      typeof window !== "undefined"
+        ? [
+            {
+              family: "Aspekta",
+              src: `url(${window.location.origin}/fonts/Aspekta-400.woff2)`,
+              weight: "400",
+            },
+          ]
+        : [],
   }
 
   if (!stripeKey) {

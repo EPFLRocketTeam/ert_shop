@@ -54,7 +54,17 @@ const paymentModule = STRIPE_API_KEY
                 webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
                 // Capture immediately on order placement (merch pre-orders are
                 // paid up front, nothing to authorise-then-capture later).
+                // TWINT also only supports immediate capture.
                 capture: true,
+                // Let Stripe offer every payment method enabled in the Stripe
+                // Dashboard (cards, TWINT, ...) through the Payment Element.
+                automaticPaymentMethods: true,
+                // Optional: a dedicated Stripe "payment method configuration"
+                // for the shop (pmc_..., e.g. only Card + TWINT), so the shop
+                // doesn't depend on the account-wide Default configuration.
+                // Test and live mode have different pmc_ ids.
+                paymentMethodConfiguration:
+                  process.env.STRIPE_PAYMENT_METHOD_CONFIGURATION || undefined,
               },
             },
           ],
