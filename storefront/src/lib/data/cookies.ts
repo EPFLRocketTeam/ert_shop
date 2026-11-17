@@ -54,7 +54,7 @@ export const setAuthToken = async (token: string) => {
   cookies.set("_medusa_jwt", token, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "strict",
+    sameSite: "lax", // see setCartId: keeps the customer logged in after a Stripe redirect
     secure: process.env.NODE_ENV === "production",
   })
 }
@@ -76,7 +76,10 @@ export const setCartId = async (cartId: string) => {
   cookies.set("_medusa_cart_id", cartId, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "strict",
+    // "lax", not "strict": redirect-based payments (TWINT) come back to the
+    // checkout from Stripe's domain, and a strict cookie is not sent on that
+    // cross-site navigation -> the cart looked missing and checkout 404ed.
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   })
 }
